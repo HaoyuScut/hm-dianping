@@ -42,7 +42,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         String shopJson = stringRedisTemplate.opsForValue().get(key);
 
         //2.判断是否存在
-        if (StrUtil.isBlank(shopJson)) {
+        if (StrUtil.isNotBlank(shopJson)) {
             //3.存在，直接返回
             Shop shop = JSONUtil.toBean(shopJson, Shop.class);
             return Result.ok(shop);
