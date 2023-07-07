@@ -52,12 +52,14 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
     @Override
     public Result queryById(Long id) {
         //缓存穿透解决方案
-        Shop shop = cacheClient
-                .queryWithPassThrough(CACHE_SHOP_KEY, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);
+//        Shop shop = cacheClient
+//                .queryWithPassThrough(CACHE_SHOP_KEY, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);
         //Shop shop = queryWithPassThrough(id);
 
         //互斥锁解决缓存击穿
 //        Shop shop = queryWithMutex(id);
+        Shop shop = cacheClient
+                .queryWithLogicExpire(CACHE_SHOP_KEY, id, Shop.class, LOCK_SHOP_KEY, this::getById, 20L, TimeUnit.SECONDS);
 
         //逻辑过期解决缓存击穿
 //        Shop shop = queryWithLogicExpire(id);
@@ -76,7 +78,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
      * @param id
      * @return
      */
-    public Shop queryWithLogicExpire(Long id) {
+    /*public Shop queryWithLogicExpire(Long id) {
         //缓存穿透解决方案
         String key = CACHE_SHOP_KEY + id;
         //1.从Redis查询缓存
@@ -121,14 +123,14 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
 
         //6.4 返回商铺信息
         return shop;
-    }
+    }*/
 
     /**
      * 互斥锁实现缓存击穿避免
      * @param id
      * @return
      */
-    public Shop queryWithMutex(Long id) {
+   /* public Shop queryWithMutex(Long id) {
         String key = CACHE_SHOP_KEY + id;
         //1.从Redis查询缓存
         String shopJson = stringRedisTemplate.opsForValue().get(key);
@@ -181,7 +183,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
 
         //8.返回
         return shop;
-    }
+    }*/
 
     /**
      * 缓存穿透解决方案
@@ -221,7 +223,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         return shop;
     }
 
-    private boolean tryLock(String key) {
+   /* private boolean tryLock(String key) {
         Boolean flag = stringRedisTemplate.opsForValue().setIfAbsent(key, "1", 10, TimeUnit.SECONDS);
         //拆箱底层就是调用booleanValue()方法，如果flag为null的话就会空指针异常
         //isTrue:只有当flag是true才是true，flag为false和null都返回false
@@ -230,7 +232,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
 
     private void unLock(String key) {
         stringRedisTemplate.delete(key);
-    }
+    }*/
 
     public void saveShop2Redis(Long id, Long expireSeconds) throws InterruptedException {
         //1.查询店铺数据
