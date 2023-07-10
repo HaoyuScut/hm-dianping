@@ -11,6 +11,7 @@ import java.time.format.DateTimeFormatter;
  * @Auther: why
  * @Date: 2023/07/07 16 03
  * @Version: v1.0
+ * Redis实现全局唯一ID
  */
 @Component
 public class RedisIdWorker {
