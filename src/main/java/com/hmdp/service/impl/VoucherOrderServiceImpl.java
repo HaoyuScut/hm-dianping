@@ -10,6 +10,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.utils.RedisIdWorker;
 import com.hmdp.utils.SimpleRedisLock;
 import com.hmdp.utils.UserHolder;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,11 @@ import java.time.LocalDateTime;
  *
  * @author 虎哥
  * @since 2021-12-22
+ * Redisson分布式锁原理:
+ * ·可重入:利用hash结构记录线程id和重入次数
+ * ·可重试:利用信号量和PubSub功能实现等待、唤醒，获取
+ * 锁失败的重试机制
+ * 超时续约:利用watchDog，每隔一段时间( releaseTime/ 3)，重置超时时间
  */
 @Service
 public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, VoucherOrder> implements IVoucherOrderService {
@@ -37,6 +44,9 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
 
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+
+    @Resource
+    private RedissonClient redissonClient;
 
     @Override
     public Result seckillVoucher(Long voucherId) {
@@ -62,10 +72,12 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         Long userId = UserHolder.getUser().getId();
 
         //创建锁对象
-        SimpleRedisLock lock = new SimpleRedisLock(stringRedisTemplate, "order:" + userId);
-
+//        SimpleRedisLock lock = new SimpleRedisLock(stringRedisTemplate, "order:" + userId);
+        RLock lock = redissonClient.getLock("lock:order:" + userId);
         //获取锁
-        boolean isLock = lock.tryLock(1200);
+//        boolean isLock = lock.tryLock(1200);
+        //尝试获取锁，参数分别是:获取锁的最大等待时间（期间会重试)，锁自动释放时间，时间单位
+        boolean isLock = lock.tryLock();
         //判断是否获取锁成功
         if(!isLock) {
             //获取锁失败，返回错误信息或重试
@@ -78,7 +90,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         } catch (IllegalStateException e) {
             throw new RuntimeException(e);
         }finally {
-            lock.unLock();
+            lock.unlock();
         }
 
         /*synchronized(userId.toString().intern()) {
