@@ -25,7 +25,7 @@ public class RedissonConfig {
         return Redisson.create(config);
     }
 
-    @Bean
+    /*@Bean
     public RedissonClient redissonClient2() {
         //配置
         Config config = new Config();
@@ -41,5 +41,5 @@ public class RedissonConfig {
         config.useSingleServer().setAddress("redis://127.0.0.1:6381");
         //创建RedissonClient对象
         return Redisson.create(config);
-    }
+    }*/
 }

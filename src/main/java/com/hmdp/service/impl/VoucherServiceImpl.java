@@ -7,11 +7,14 @@ import com.hmdp.mapper.VoucherMapper;
 import com.hmdp.entity.SeckillVoucher;
 import com.hmdp.service.ISeckillVoucherService;
 import com.hmdp.service.IVoucherService;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.util.List;
+
+import static com.hmdp.utils.RedisConstants.SECKILL_STOCK_KEY;
 
 /**
  * <p>
@@ -20,12 +23,21 @@ import java.util.List;
  *
  * @author 虎哥
  * @since 2021-12-22
+ * 改进秒杀业务，提高并发性能
+ * 需求:
+ * 新增秒杀优惠券的同时，将优惠券信息保存到Redis中
+ * 基于Lua脚本，判断秒杀库存、一人一单，决定用户是否抢购成功
+ * 如果抢购成功，将优惠券id和用户id封装后存入阻塞队列开启线程任务，
+ * 不断从阻塞队列中获取信息，实现异步下单功能
  */
 @Service
 public class VoucherServiceImpl extends ServiceImpl<VoucherMapper, Voucher> implements IVoucherService {
 
     @Resource
     private ISeckillVoucherService seckillVoucherService;
+
+    @Resource
+    private StringRedisTemplate stringRedisTemplate;
 
     @Override
     public Result queryVoucherOfShop(Long shopId) {
@@ -47,6 +59,9 @@ public class VoucherServiceImpl extends ServiceImpl<VoucherMapper, Voucher> impl
         seckillVoucher.setBeginTime(voucher.getBeginTime());
         seckillVoucher.setEndTime(voucher.getEndTime());
         seckillVoucherService.save(seckillVoucher);
+
+        //保存秒杀库存到redis
+        stringRedisTemplate.opsForValue().set(SECKILL_STOCK_KEY + voucher.getId(), voucher.getStock().toString());
     }
 
 
