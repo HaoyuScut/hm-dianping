@@ -43,6 +43,11 @@ public class BlogController {
         return Result.ok(blog.getId());
     }
 
+    /**
+     * 点赞更新
+     * @param id
+     * @return
+     */
     @PutMapping("/like/{id}")
     public Result likeBlog(@PathVariable("id") Long id) {
         // 修改点赞数量 update tb_blog set like = like + 1 where id = ?
@@ -63,14 +68,55 @@ public class BlogController {
         return Result.ok(records);
     }
 
+    /**
+     * 博客分页查询
+     * @param current
+     * @return
+     */
     @GetMapping("/hot")
     public Result queryHotBlog(@RequestParam(value = "current", defaultValue = "1") Integer current) {
 
         return blogService.queryHotBlog(current);
     }
 
+    /**
+     * 按照id查询博客
+     * @param id
+     * @return
+     */
     @GetMapping("/{id}")
     public Result queryBlogById(@PathVariable("id") Long id) {
         return blogService.queryBlogById(id);
+    }
+
+    /**
+     * 点赞Top5查询
+     * @param id
+     * @return
+     */
+    @GetMapping("/likes/{id}")
+    public Result queryBlogLikes(@PathVariable("id") Long id) {
+        return blogService.queryBlogLikes(id);
+    }
+
+
+    // BlogController
+
+    /**
+     * 根据用户id查询博客
+     * @param current
+     * @param id
+     * @return
+     */
+    @GetMapping("/of/user")
+    public Result queryBlogByUserId(
+            @RequestParam(value = "current", defaultValue = "1") Integer current,
+            @RequestParam("id") Long id) {
+        // 根据用户查询
+        Page<Blog> page = blogService.query()
+                .eq("user_id", id).page(new Page<>(current, SystemConstants.MAX_PAGE_SIZE));
+        // 获取当前页数据
+        List<Blog> records = page.getRecords();
+        return Result.ok(records);
     }
 }
